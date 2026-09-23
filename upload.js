@@ -1,22 +1,10 @@
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
 
 const MAX_FILE_SIZE =
   Number(process.env.MAX_UPLOAD_MB || 10) *
   1024 *
   1024;
-
-const uploadDirectory = path.join(
-  process.cwd(),
-  "uploads"
-);
-
-if (!fs.existsSync(uploadDirectory)) {
-  fs.mkdirSync(uploadDirectory, {
-    recursive: true
-  });
-}
 
 const allowedMimeTypes = new Set([
   "application/pdf",
@@ -33,24 +21,20 @@ const allowedExtensions = new Set([
   ".webp"
 ]);
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, callback) => {
-    callback(null, uploadDirectory);
-  },
+/*
+|--------------------------------------------------------------------------
+| Temporary memory storage
+|--------------------------------------------------------------------------
+|
+| Vercel Serverless Functions do not provide a persistent local
+| filesystem for application uploads.
+|
+| We therefore keep the uploaded file in memory temporarily.
+| Permanent storage will be added later using external storage.
+|
+*/
 
-  filename: (_req, file, callback) => {
-    const extension = path
-      .extname(file.originalname)
-      .toLowerCase();
-
-    const uniqueName =
-      `${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 12)}${extension}`;
-
-    callback(null, uniqueName);
-  }
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (_req, file, callback) => {
   const extension = path
@@ -81,16 +65,23 @@ const upload = multer({
   fileFilter
 });
 
-function getPublicFileName(file) {
-  if (!file) {
-    return null;
-  }
+/*
+|--------------------------------------------------------------------------
+| Public file name
+|--------------------------------------------------------------------------
+|
+| There is no permanent public URL yet because files are currently
+| stored only in memory.
+|
+| Permanent file storage will be connected later.
+|
+*/
 
-  return `/uploads/${file.filename}`;
+function getPublicFileName(_file) {
+  return null;
 }
 
 module.exports = {
   upload,
-  getPublicFileName,
-  uploadDirectory
+  getPublicFileName
 };
