@@ -5,10 +5,15 @@ const helmet = require("helmet");
 const cors = require("cors");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
+const path = require("path");
+
+const apiRouter = require("./api");
 
 const app = express();
 
-const PORT = Number(process.env.PORT || 3000);
+const PORT = Number(
+  process.env.PORT || 3000
+);
 
 app.disable("x-powered-by");
 
@@ -20,7 +25,8 @@ app.use(
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || false,
+    origin:
+      process.env.FRONTEND_URL || false,
     credentials: true
   })
 );
@@ -54,7 +60,8 @@ app.get("/api/health", (_req, res) => {
     success: true,
     status: "online",
     service: "company-platform",
-    timestamp: new Date().toISOString()
+    timestamp:
+      new Date().toISOString()
   });
 });
 
@@ -66,6 +73,33 @@ app.get("/api", (_req, res) => {
   });
 });
 
+/*
+ * API routes
+ */
+
+app.use("/api", apiRouter);
+
+/*
+ * Static uploads
+ */
+
+app.use(
+  "/uploads",
+  express.static(
+    path.join(
+      process.cwd(),
+      "uploads"
+    ),
+    {
+      index: false
+    }
+  )
+);
+
+/*
+ * 404
+ */
+
 app.use((_req, res) => {
   res.status(404).json({
     success: false,
@@ -73,15 +107,26 @@ app.use((_req, res) => {
   });
 });
 
-app.use((error, _req, res, _next) => {
-  console.error(error);
+/*
+ * Error handler
+ */
 
-  res.status(500).json({
-    success: false,
-    error: "Internal server error"
-  });
-});
+app.use(
+  (error, _req, res, _next) => {
+    console.error(
+      "[SERVER ERROR]",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error"
+    });
+  }
+);
 
 app.listen(PORT, () => {
-  console.log(`Company Platform running on port ${PORT}`);
+  console.log(
+    `Company Platform running on port ${PORT}`
+  );
 });
