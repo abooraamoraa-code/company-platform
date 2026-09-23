@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="description"
+    content="Learn about our company, vision and approach."
+  >
+
+  <title>
+    About | Company Platform
+  </title>
+
+  <style>
+
+    :root {
+      --bg: #070b14;
+      --surface: #101726;
+      --text: #f5f7fb;
+      --muted: #9ca8bc;
+      --primary: #6d5dfc;
+      --border: rgba(255,255,255,.09);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+
+      font-family:
+        Inter,
+        system-ui,
+        sans-serif;
+
+      line-height: 1.7;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .container {
+      width: min(1100px, 92%);
+      margin: auto;
+    }
+
+    header {
+      border-bottom:
+        1px solid var(--border);
+
+      background:
+        rgba(7,11,20,.9);
+    }
+
+    .navbar {
+      min-height: 76px;
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: space-between;
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .brand span {
+      color: #8b7fff;
+    }
+
+    nav {
+      display: flex;
+      gap: 24px;
+    }
+
+    nav a {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    nav a:hover {
+      color: white;
+    }
+
+    .hero {
+      padding: 110px 0 80px;
+    }
+
+    .eyebrow {
+      color: #a9a0ff;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    h1 {
+      font-size:
+        clamp(42px, 7vw, 72px);
+
+      line-height: 1.05;
+
+      letter-spacing: -3px;
+
+      max-width: 850px;
+
+      margin-top: 15px;
+    }
+
+    .hero p {
+      color: var(--muted);
+
+      font-size: 19px;
+
+      max-width: 720px;
+
+      margin-top: 25px;
+    }
+
+    section {
+      padding: 80px 0;
+    }
+
+    .grid {
+      display: grid;
+
+      grid-template-columns:
+        repeat(2,1fr);
+
+      gap: 22px;
+    }
+
+    .card {
+      padding: 30px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 22px;
+
+      background: var(--surface);
+    }
+
+    .card h2 {
+      margin-bottom: 12px;
+    }
+
+    .card p {
+      color: var(--muted);
+    }
+
+    .values {
+      display: grid;
+
+      grid-template-columns:
+        repeat(3,1fr);
+
+      gap: 20px;
+    }
+
+    .value {
+      padding: 25px;
+
+      background: var(--surface);
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 20px;
+    }
+
+    .value strong {
+      display: block;
+
+      font-size: 18px;
+
+      margin-bottom: 10px;
+    }
+
+    .value p {
+      color: var(--muted);
+    }
+
+    .contact {
+      margin-top: 30px;
+    }
+
+    .facebook {
+      display: inline-flex;
+
+      padding:
+        12px 18px;
+
+      border-radius: 12px;
+
+      background: var(--primary);
+
+      font-weight: 700;
+    }
+
+    footer {
+      border-top:
+        1px solid var(--border);
+
+      padding: 35px 0;
+
+      color: var(--muted);
+    }
+
+    @media(max-width:750px) {
+
+      nav {
+        display: none;
+      }
+
+      .grid,
+      .values {
+        grid-template-columns: 1fr;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+<header>
+
+  <div class="container navbar">
+
+    <a
+      href="index.html"
+      class="brand"
+    >
+      Company<span>.</span>
+    </a>
+
+    <nav>
+
+      <a href="index.html">
+        Home
+      </a>
+
+      <a href="about.html">
+        About
+      </a>
+
+      <a href="services.html">
+        Services
+      </a>
+
+      <a href="projects.html">
+        Projects
+      </a>
+
+      <a href="careers.html">
+        Careers
+      </a>
+
+      <a href="contact.html">
+        Contact
+      </a>
+
+    </nav>
+
+  </div>
+
+</header>
+
+<main>
+
+  <section class="hero">
