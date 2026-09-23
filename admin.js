@@ -1,128 +1,36 @@
-const ADMIN_API = "/api";
-
-function getAdminToken() {
-  return sessionStorage.getItem(
-    "admin_token"
-  );
-}
-
-function setAdminToken(token) {
-  sessionStorage.setItem(
-    "admin_token",
-    token
-  );
-}
-
-function clearAdminSession() {
-  sessionStorage.removeItem(
-    "admin_token"
-  );
-
-  window.location.href =
-    "admin.html";
-}
-
-async function adminRequest(
-  endpoint,
-  options = {}
-) {
-  const token =
-    getAdminToken();
-
-  const response =
-    await fetch(
-      `${ADMIN_API}${endpoint}`,
-      {
-        ...options,
-        headers: {
-          ...(options.body
-            ? {
-                "Content-Type":
-                  "application/json"
-              }
-            : {}),
-          Authorization:
-            `Bearer ${token}`,
-          ...(options.headers || {})
-        }
-      }
-    );
-
-  const data =
-    await response.json();
-
-  if (response.status === 401) {
-    clearAdminSession();
-    throw new Error(
-      "Authentication expired"
-    );
+{
+  "name": "company-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Professional company portfolio and client management platform",
+  "scripts": {
+    "dev": "tsx server.js",
+    "build": "tsc",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.0",
+    "pg": "^8.13.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/compression": "^1.7.5",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   }
-
-  if (!response.ok) {
-    throw new Error(
-      data.error ||
-        "Admin request failed"
-    );
-  }
-
-  return data;
-}
-
-async function adminLogin(
-  email,
-  password
-) {
-  const response =
-    await fetch(
-      `${ADMIN_API}/auth/login`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type":
-            "application/json"
-        },
-        body: JSON.stringify({
-          email,
-          password
-        })
-      }
-    );
-
-  const data =
-    await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data.error ||
-        "Login failed"
-    );
-  }
-
-  setAdminToken(data.token);
-
-  return data;
-}
-
-async function loadDashboard() {
-  return adminRequest(
-    "/admin/stats"
-  );
-}
-
-async function loadAdminProjects() {
-  return adminRequest(
-    "/admin/projects"
-  );
-}
-
-async function loadClientRequests() {
-  return adminRequest(
-    "/admin/requests"
-  );
-}
-
-async function loadApplications() {
-  return adminRequest(
-    "/admin/applications"
-  );
 }
