@@ -1,26 +1,110 @@
-const ADMIN_API = "/api";
+"use strict";
 
 /*
 |--------------------------------------------------------------------------
-| Helpers
+| Admin Dashboard Frontend
+|--------------------------------------------------------------------------
+| متوافق مع:
+| - admin.html
+| - /api/auth/login
+| - /api/auth/me
+| - /api/admin/stats
+| - /api/admin/projects
+| - /api/admin/requests
+| - /api/admin/applications
+|--------------------------------------------------------------------------
+*/
+
+const ADMIN_API = "/api";
+
+const PAGE_CONFIG = {
+  overview: {
+    title: "نظرة عامة",
+    description:
+      "متابعة حالة المنصة والنشاط الأخير."
+  },
+
+  projects: {
+    title: "المشاريع",
+    description:
+      "إدارة المشاريع الموجودة في المنصة."
+  },
+
+  services: {
+    title: "الخدمات",
+    description:
+      "عرض الخدمات الحالية في المنصة."
+  },
+
+  requests: {
+    title: "طلبات العملاء",
+    description:
+      "متابعة طلبات العملاء والمشاريع الجديدة."
+  },
+
+  applications: {
+    title: "طلبات الوظائف",
+    description:
+      "متابعة طلبات التوظيف الواردة."
+  },
+
+  messages: {
+    title: "الرسائل",
+    description:
+      "متابعة الرسائل الواردة من العملاء."
+  },
+
+  settings: {
+    title: "الإعدادات",
+    description:
+      "إعدادات ومعلومات المنصة."
+  }
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| Session
 |--------------------------------------------------------------------------
 */
 
 function getAdminToken() {
-  return sessionStorage.getItem("admin_token");
+  return sessionStorage.getItem(
+    "admin_token"
+  );
 }
 
 function setAdminToken(token) {
-  sessionStorage.setItem("admin_token", token);
+  if (!token) {
+    return;
+  }
+
+  sessionStorage.setItem(
+    "admin_token",
+    token
+  );
 }
 
 function clearAdminSession() {
-  sessionStorage.removeItem("admin_token");
+  sessionStorage.removeItem(
+    "admin_token"
+  );
+
   window.location.href = "admin.html";
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| HTML escaping
+|--------------------------------------------------------------------------
+*/
+
 function escapeHTML(value) {
-  if (value === null || value === undefined) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
     return "";
   }
 
@@ -32,37 +116,66 @@ function escapeHTML(value) {
     .replaceAll("'", "&#039;");
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| Generic helpers
+|--------------------------------------------------------------------------
+*/
+
 function formatDate(value) {
   if (!value) {
     return "—";
   }
 
-  try {
-    return new Intl.DateTimeFormat("ar", {
-      dateStyle: "medium",
-      timeStyle: "short"
-    }).format(new Date(value));
-  } catch {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
     return escapeHTML(value);
   }
+
+  return new Intl.DateTimeFormat(
+    "ar",
+    {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }
+  ).format(date);
 }
 
-function formatStatus(status) {
-  const value = String(status || "").toLowerCase();
+function formatBooleanBadge(
+  value,
+  trueText = "نعم",
+  falseText = "لا"
+) {
+  return value
+    ? `<span class="badge badge-success">
+        ${escapeHTML(trueText)}
+       </span>`
+    : `<span class="badge badge-warning">
+        ${escapeHTML(falseText)}
+       </span>`;
+}
 
-  const statuses = {
+function statusBadge(status) {
+  const normalized =
+    String(status || "")
+      .toLowerCase()
+      .trim();
+
+  const map = {
     new: {
       text: "جديد",
       className: "badge-warning"
     },
 
     unread: {
-      text: "غير مقروءة",
+      text: "غير مقروء",
       className: "badge-warning"
     },
 
     read: {
-      text: "مقروءة",
+      text: "مقروء",
       className: "badge-success"
     },
 
@@ -76,9 +189,9 @@ function formatStatus(status) {
       className: "badge-success"
     },
 
-    approved: {
-      text: "مقبول",
-      className: "badge-success"
+    pending: {
+      text: "قيد الانتظار",
+      className: "badge-warning"
     },
 
     rejected: {
@@ -86,64 +199,41 @@ function formatStatus(status) {
       className: "badge-danger"
     },
 
-    pending: {
-      text: "قيد المراجعة",
-      className: "badge-warning"
-    },
-
-    in_progress: {
-      text: "قيد التنفيذ",
-      className: "badge-warning"
-    },
-
     closed: {
       text: "مغلق",
+      className: "badge-danger"
+    },
+
+    inactive: {
+      text: "غير نشط",
       className: "badge-danger"
     }
   };
 
-  const config = statuses[value];
-
-  if (!config) {
-    return `
-      <span class="badge badge-warning">
-        ${escapeHTML(status || "غير محدد")}
-      </span>
-    `;
-  }
+  const item =
+    map[normalized] || {
+      text: status || "—",
+      className: "badge-warning"
+    };
 
   return `
-    <span class="badge ${config.className}">
-      ${config.text}
+    <span class="badge ${item.className}">
+      ${escapeHTML(item.text)}
     </span>
   `;
 }
 
-function formatBoolean(value) {
-  return value
-    ? `
-      <span class="badge badge-success">
-        نعم
-      </span>
-    `
-    : `
-      <span class="badge badge-warning">
-        لا
-      </span>
-    `;
-}
+function setElementText(
+  selector,
+  value
+) {
+  const element =
+    document.querySelector(selector);
 
-function showMessage(element, message, type = "error") {
-  if (!element) {
-    return;
+  if (element) {
+    element.textContent =
+      value ?? "—";
   }
-
-  element.textContent = message;
-
-  element.style.color =
-    type === "success"
-      ? "#86efac"
-      : "#fca5a5";
 }
 
 
@@ -153,71 +243,88 @@ function showMessage(element, message, type = "error") {
 |--------------------------------------------------------------------------
 */
 
-async function adminRequest(endpoint, options = {}) {
-  const token = getAdminToken();
+async function parseResponse(response) {
+  const contentType =
+    response.headers.get(
+      "content-type"
+    ) || "";
+
+  if (
+    contentType.includes(
+      "application/json"
+    )
+  ) {
+    return response.json();
+  }
+
+  const text =
+    await response.text();
+
+  return {
+    error:
+      text ||
+      "Unexpected server response"
+  };
+}
+
+async function adminRequest(
+  endpoint,
+  options = {}
+) {
+  const token =
+    getAdminToken();
 
   if (!token) {
     clearAdminSession();
-    throw new Error("Authentication required");
+
+    throw new Error(
+      "Authentication required"
+    );
   }
 
   const headers = {
     ...(options.body
       ? {
-          "Content-Type": "application/json"
+          "Content-Type":
+            "application/json"
         }
       : {}),
     ...(options.headers || {}),
-    Authorization: `Bearer ${token}`
+    Authorization:
+      `Bearer ${token}`
   };
 
-  let response;
-
-  try {
-    response = await fetch(
+  const response =
+    await fetch(
       `${ADMIN_API}${endpoint}`,
       {
         ...options,
         headers
       }
     );
-  } catch (error) {
-    console.error(
-      "[ADMIN API]",
-      error
-    );
 
-    throw new Error(
-      "تعذر الاتصال بالخادم."
-    );
-  }
-
-  let data = {};
-
-  try {
-    data = await response.json();
-  } catch {
-    data = {};
-  }
+  const data =
+    await parseResponse(response);
 
   if (response.status === 401) {
     clearAdminSession();
 
     throw new Error(
-      "انتهت جلسة تسجيل الدخول."
+      "Authentication expired"
     );
   }
 
   if (response.status === 403) {
     throw new Error(
-      "ليس لديك صلاحية لتنفيذ هذا الإجراء."
+      data.error ||
+        "ليس لديك صلاحية لتنفيذ هذا الإجراء."
     );
   }
 
   if (!response.ok) {
     throw new Error(
       data.error ||
-        "حدث خطأ أثناء تنفيذ الطلب."
+        "Admin request failed"
     );
   }
 
@@ -231,11 +338,12 @@ async function adminRequest(endpoint, options = {}) {
 |--------------------------------------------------------------------------
 */
 
-async function adminLogin(email, password) {
-  let response;
-
-  try {
-    response = await fetch(
+async function adminLogin(
+  email,
+  password
+) {
+  const response =
+    await fetch(
       `${ADMIN_API}/auth/login`,
       {
         method: "POST",
@@ -251,39 +359,26 @@ async function adminLogin(email, password) {
         })
       }
     );
-  } catch (error) {
-    console.error(
-      "[LOGIN]",
-      error
-    );
 
-    throw new Error(
-      "تعذر الاتصال بالخادم."
-    );
-  }
-
-  let data = {};
-
-  try {
-    data = await response.json();
-  } catch {
-    data = {};
-  }
+  const data =
+    await parseResponse(response);
 
   if (!response.ok) {
     throw new Error(
       data.error ||
-        "بيانات الدخول غير صحيحة."
+        "Login failed"
     );
   }
 
   if (!data.token) {
     throw new Error(
-      "لم يتم استلام جلسة مصادقة من الخادم."
+      "لم يتم استلام رمز المصادقة من الخادم."
     );
   }
 
-  setAdminToken(data.token);
+  setAdminToken(
+    data.token
+  );
 
   return data;
 }
@@ -291,7 +386,7 @@ async function adminLogin(email, password) {
 
 /*
 |--------------------------------------------------------------------------
-| Current user
+| Authentication
 |--------------------------------------------------------------------------
 */
 
@@ -304,7 +399,7 @@ async function loadCurrentAdmin() {
 
 /*
 |--------------------------------------------------------------------------
-| Dashboard
+| Dashboard API
 |--------------------------------------------------------------------------
 */
 
@@ -314,38 +409,17 @@ async function loadDashboard() {
   );
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| Projects
-|--------------------------------------------------------------------------
-*/
-
 async function loadAdminProjects() {
   return adminRequest(
     "/admin/projects"
   );
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| Requests
-|--------------------------------------------------------------------------
-*/
-
 async function loadClientRequests() {
   return adminRequest(
     "/admin/requests"
   );
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| Applications
-|--------------------------------------------------------------------------
-*/
 
 async function loadApplications() {
   return adminRequest(
@@ -356,366 +430,330 @@ async function loadApplications() {
 
 /*
 |--------------------------------------------------------------------------
-| Services
+| Dashboard UI
 |--------------------------------------------------------------------------
-|
-| لا يوجد endpoint إداري للخدمات في api.js الحالي،
-| لذلك نحاول استخدام endpoint العام.
-|
 */
 
-async function loadAdminServices() {
-  return adminRequest(
-    "/services"
+function showDashboard() {
+  const loginScreen =
+    document.querySelector(
+      "#loginScreen"
+    );
+
+  const dashboard =
+    document.querySelector(
+      "#dashboard"
+    );
+
+  if (loginScreen) {
+    loginScreen.style.display =
+      "none";
+  }
+
+  if (dashboard) {
+    dashboard.classList.add(
+      "active"
+    );
+  }
+}
+
+function showLogin() {
+  const loginScreen =
+    document.querySelector(
+      "#loginScreen"
+    );
+
+  const dashboard =
+    document.querySelector(
+      "#dashboard"
+    );
+
+  if (loginScreen) {
+    loginScreen.style.display =
+      "grid";
+  }
+
+  if (dashboard) {
+    dashboard.classList.remove(
+      "active"
+    );
+  }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Login form
+|--------------------------------------------------------------------------
+*/
+
+function setupLogin() {
+  const form =
+    document.querySelector(
+      "#loginForm"
+    );
+
+  if (!form) {
+    return;
+  }
+
+  const message =
+    document.querySelector(
+      "#loginMessage"
+    );
+
+  const button =
+    form.querySelector(
+      'button[type="submit"]'
+    );
+
+  form.addEventListener(
+    "submit",
+    async (event) => {
+      event.preventDefault();
+
+      if (message) {
+        message.textContent =
+          "";
+      }
+
+      const email =
+        document
+          .querySelector(
+            "#loginEmail"
+          )
+          ?.value
+          .trim();
+
+      const password =
+        document
+          .querySelector(
+            "#loginPassword"
+          )
+          ?.value;
+
+      if (!email || !password) {
+        if (message) {
+          message.textContent =
+            "يرجى إدخال البريد الإلكتروني وكلمة المرور.";
+        }
+
+        return;
+      }
+
+      const originalText =
+        button
+          ? button.textContent
+          : "";
+
+      if (button) {
+        button.disabled = true;
+        button.textContent =
+          "جاري تسجيل الدخول...";
+      }
+
+      try {
+        const data =
+          await adminLogin(
+            email,
+            password
+          );
+
+        updateAdminUser(
+          data.user
+        );
+
+        showDashboard();
+
+        await initializeDashboard();
+
+      } catch (error) {
+        console.error(
+          "[ADMIN LOGIN]",
+          error
+        );
+
+        if (message) {
+          message.textContent =
+            error.message ||
+            "فشل تسجيل الدخول.";
+        }
+
+      } finally {
+        if (button) {
+          button.disabled =
+            false;
+
+          button.textContent =
+            originalText ||
+            "تسجيل الدخول";
+        }
+      }
+    }
   );
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| DOM
+| Admin user
 |--------------------------------------------------------------------------
 */
 
-const elements = {
-  loginScreen:
-    document.querySelector(
-      "#loginScreen"
-    ),
-
-  dashboard:
-    document.querySelector(
-      "#dashboard"
-    ),
-
-  loginForm:
-    document.querySelector(
-      "#loginForm"
-    ),
-
-  loginEmail:
-    document.querySelector(
-      "#loginEmail"
-    ),
-
-  loginPassword:
-    document.querySelector(
-      "#loginPassword"
-    ),
-
-  loginMessage:
-    document.querySelector(
-      "#loginMessage"
-    ),
-
-  logoutButton:
-    document.querySelector(
-      "#logoutButton"
-    ),
-
-  mobileMenuButton:
-    document.querySelector(
-      "#mobileMenuButton"
-    ),
-
-  sidebar:
-    document.querySelector(
-      "#sidebar"
-    ),
-
-  pageTitle:
-    document.querySelector(
-      "#pageTitle"
-    ),
-
-  pageDescription:
-    document.querySelector(
-      "#pageDescription"
-    ),
-
-  adminName:
-    document.querySelector(
-      "#adminName"
-    ),
-
-  adminRole:
-    document.querySelector(
-      "#adminRole"
-    ),
-
-  statProjects:
-    document.querySelector(
-      "#statProjects"
-    ),
-
-  statRequests:
-    document.querySelector(
-      "#statRequests"
-    ),
-
-  statApplications:
-    document.querySelector(
-      "#statApplications"
-    ),
-
-  statMessages:
-    document.querySelector(
-      "#statMessages"
-    ),
-
-  statUsers:
-    document.querySelector(
-      "#statUsers"
-    ),
-
-  projectsTable:
-    document.querySelector(
-      "#projectsTable"
-    ),
-
-  servicesTable:
-    document.querySelector(
-      "#servicesTable"
-    ),
-
-  requestsTable:
-    document.querySelector(
-      "#requestsTable"
-    ),
-
-  applicationsTable:
-    document.querySelector(
-      "#applicationsTable"
-    ),
-
-  messagesTable:
-    document.querySelector(
-      "#messagesTable"
-    )
-};
-
-
-/*
-|--------------------------------------------------------------------------
-| Loading helpers
-|--------------------------------------------------------------------------
-*/
-
-function setTableLoading(
-  table,
-  colspan
+function updateAdminUser(
+  user
 ) {
-  if (!table) {
+  if (!user) {
     return;
   }
 
-  table.innerHTML = `
-    <tr>
-      <td
-        colspan="${colspan}"
-        style="
-          text-align:center;
-          color:#94a3b8;
-          padding:30px;
-        "
-      >
-        جاري التحميل...
-      </td>
-    </tr>
-  `;
-}
+  const name =
+    user.full_name ||
+    user.email ||
+    "Admin";
 
-function setTableError(
-  table,
-  colspan,
-  message
-) {
-  if (!table) {
-    return;
-  }
+  const role =
+    user.role ||
+    "Administrator";
 
-  table.innerHTML = `
-    <tr>
-      <td
-        colspan="${colspan}"
-        style="
-          text-align:center;
-          color:#fca5a5;
-          padding:30px;
-        "
-      >
-        ${escapeHTML(message)}
-      </td>
-    </tr>
-  `;
-}
+  setElementText(
+    "#adminName",
+    name
+  );
 
-function setTableEmpty(
-  table,
-  colspan,
-  message
-) {
-  if (!table) {
-    return;
-  }
+  setElementText(
+    "#adminRole",
+    role
+  );
 
-  table.innerHTML = `
-    <tr>
-      <td
-        colspan="${colspan}"
-        style="
-          text-align:center;
-          color:#94a3b8;
-          padding:30px;
-        "
-      >
-        ${escapeHTML(message)}
-      </td>
-    </tr>
-  `;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Render dashboard
-|--------------------------------------------------------------------------
-*/
-
-async function refreshDashboard() {
-  try {
-    const data =
-      await loadDashboard();
-
-    const stats =
-      data.stats || {};
-
-    if (elements.statProjects) {
-      elements.statProjects.textContent =
-        stats.projects ?? 0;
-    }
-
-    if (elements.statRequests) {
-      elements.statRequests.textContent =
-        stats.new_requests ?? 0;
-    }
-
-    if (elements.statApplications) {
-      elements.statApplications.textContent =
-        stats.new_applications ?? 0;
-    }
-
-    if (elements.statMessages) {
-      elements.statMessages.textContent =
-        stats.unread_messages ?? 0;
-    }
-
-    if (elements.statUsers) {
-      elements.statUsers.textContent =
-        stats.active_users ?? 0;
-    }
-  } catch (error) {
-    console.error(
-      "[DASHBOARD]",
-      error
+  const avatar =
+    document.querySelector(
+      "#adminUser .avatar"
     );
 
-    if (elements.statProjects) {
-      elements.statProjects.textContent =
-        "—";
-    }
-
-    if (elements.statRequests) {
-      elements.statRequests.textContent =
-        "—";
-    }
-
-    if (elements.statApplications) {
-      elements.statApplications.textContent =
-        "—";
-    }
-
-    if (elements.statMessages) {
-      elements.statMessages.textContent =
-        "—";
-    }
-
-    if (elements.statUsers) {
-      elements.statUsers.textContent =
-        "—";
-    }
+  if (avatar) {
+    avatar.textContent =
+      name
+        .trim()
+        .charAt(0)
+        .toUpperCase() ||
+      "A";
   }
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| Render projects
+| Statistics
+|--------------------------------------------------------------------------
+*/
+
+async function refreshStats() {
+  const data =
+    await loadDashboard();
+
+  const stats =
+    data.stats || {};
+
+  setElementText(
+    "#statProjects",
+    stats.projects ?? 0
+  );
+
+  setElementText(
+    "#statRequests",
+    stats.new_requests ?? 0
+  );
+
+  setElementText(
+    "#statApplications",
+    stats.new_applications ?? 0
+  );
+
+  setElementText(
+    "#statMessages",
+    stats.unread_messages ?? 0
+  );
+
+  setElementText(
+    "#statUsers",
+    stats.active_users ?? 0
+  );
+
+  return data;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Projects
 |--------------------------------------------------------------------------
 */
 
 async function refreshProjects() {
-  if (!elements.projectsTable) {
+  const table =
+    document.querySelector(
+      "#projectsTable"
+    );
+
+  if (!table) {
     return;
   }
 
-  setTableLoading(
-    elements.projectsTable,
-    4
-  );
+  table.innerHTML = `
+    <tr>
+      <td colspan="4">
+        جاري تحميل المشاريع...
+      </td>
+    </tr>
+  `;
 
   try {
     const data =
       await loadAdminProjects();
 
     const projects =
-      Array.isArray(data.projects)
+      Array.isArray(
+        data.projects
+      )
         ? data.projects
         : [];
 
     if (!projects.length) {
-      setTableEmpty(
-        elements.projectsTable,
-        4,
-        "لا توجد مشاريع."
-      );
+      table.innerHTML = `
+        <tr>
+          <td colspan="4">
+            لا توجد مشاريع حالياً.
+          </td>
+        </tr>
+      `;
 
       return;
     }
 
-    elements.projectsTable.innerHTML =
+    table.innerHTML =
       projects
-        .map((project) => {
-          const technologies =
-            Array.isArray(
-              project.technologies
-            )
-              ? project.technologies.join(
-                  "، "
-                )
-              : "";
-
-          return `
+        .map(
+          (project) => `
             <tr>
               <td>
                 <strong>
                   ${escapeHTML(
-                    project.title
+                    project.title ||
+                      "بدون عنوان"
                   )}
                 </strong>
 
                 ${
-                  technologies
+                  project.slug
                     ? `
-                      <div
-                        style="
-                          color:#64748b;
-                          font-size:11px;
-                          margin-top:4px;
-                        "
-                      >
+                      <div style="
+                        color:#64748b;
+                        font-size:11px;
+                        margin-top:4px;
+                      ">
                         ${escapeHTML(
-                          technologies
+                          project.slug
                         )}
                       </div>
                     `
@@ -733,15 +771,17 @@ async function refreshProjects() {
                     `
                     : `
                       <span class="badge badge-warning">
-                        مسودة
+                        غير منشور
                       </span>
                     `
                 }
               </td>
 
               <td>
-                ${formatBoolean(
-                  project.is_featured
+                ${formatBooleanBadge(
+                  project.is_featured,
+                  "مميز",
+                  "عادي"
                 )}
               </td>
 
@@ -751,61 +791,101 @@ async function refreshProjects() {
                 )}
               </td>
             </tr>
-          `;
-        })
+          `
+        )
         .join("");
+
   } catch (error) {
     console.error(
       "[PROJECTS]",
       error
     );
 
-    setTableError(
-      elements.projectsTable,
-      4,
-      error.message ||
-        "تعذر تحميل المشاريع."
-    );
+    table.innerHTML = `
+      <tr>
+        <td colspan="4">
+          تعذر تحميل المشاريع.
+          ${escapeHTML(
+            error.message || ""
+          )}
+        </td>
+      </tr>
+    `;
   }
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| Render services
+| Services
+|--------------------------------------------------------------------------
+|
+| لا يوجد حالياً endpoint إداري للخدمات في api.js.
+| لذلك نعرض الخدمات من الـpublic API بشكل آمن للقراءة فقط.
 |--------------------------------------------------------------------------
 */
 
+async function loadServices() {
+  const response =
+    await fetch(
+      `${ADMIN_API}/services`
+    );
+
+  const data =
+    await parseResponse(response);
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+        "Unable to load services"
+    );
+  }
+
+  return data;
+}
+
 async function refreshServices() {
-  if (!elements.servicesTable) {
+  const table =
+    document.querySelector(
+      "#servicesTable"
+    );
+
+  if (!table) {
     return;
   }
 
-  setTableLoading(
-    elements.servicesTable,
-    3
-  );
+  table.innerHTML = `
+    <tr>
+      <td colspan="3">
+        جاري تحميل الخدمات...
+      </td>
+    </tr>
+  `;
 
   try {
     const data =
-      await loadAdminServices();
+      await loadServices();
 
     const services =
-      Array.isArray(data.services)
+      Array.isArray(
+        data.services
+      )
         ? data.services
         : [];
 
     if (!services.length) {
-      setTableEmpty(
-        elements.servicesTable,
-        3,
-        "لا توجد خدمات."
-      );
+      table.innerHTML = `
+        <tr>
+          <td colspan="3">
+            لا توجد خدمات حالياً.
+          </td>
+        </tr>
+      `;
 
       return;
     }
 
-    elements.servicesTable.innerHTML =
+    table.innerHTML =
       services
         .map(
           (service) => `
@@ -813,22 +893,24 @@ async function refreshServices() {
               <td>
                 <strong>
                   ${escapeHTML(
-                    service.title
+                    service.title ||
+                      "بدون عنوان"
                   )}
                 </strong>
               </td>
 
               <td>
-                <code
-                  style="
-                    color:#a5b4fc;
-                    font-size:12px;
-                  "
-                >
-                  /services/${escapeHTML(
-                    service.slug
-                  )}
-                </code>
+                ${
+                  service.slug
+                    ? `
+                      <code>
+                        /services/${escapeHTML(
+                          service.slug
+                        )}
+                      </code>
+                    `
+                    : "—"
+                }
               </td>
 
               <td>
@@ -836,12 +918,12 @@ async function refreshServices() {
                   service.is_active
                     ? `
                       <span class="badge badge-success">
-                        نشطة
+                        نشط
                       </span>
                     `
                     : `
                       <span class="badge badge-danger">
-                        متوقفة
+                        غير نشط
                       </span>
                     `
                 }
@@ -850,91 +932,90 @@ async function refreshServices() {
           `
         )
         .join("");
+
   } catch (error) {
     console.error(
       "[SERVICES]",
       error
     );
 
-    setTableError(
-      elements.servicesTable,
-      3,
-      error.message ||
-        "تعذر تحميل الخدمات."
-    );
+    table.innerHTML = `
+      <tr>
+        <td colspan="3">
+          تعذر تحميل الخدمات.
+          ${escapeHTML(
+            error.message || ""
+          )}
+        </td>
+      </tr>
+    `;
   }
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| Render client requests
+| Client Requests
 |--------------------------------------------------------------------------
 */
 
 async function refreshRequests() {
-  if (!elements.requestsTable) {
+  const table =
+    document.querySelector(
+      "#requestsTable"
+    );
+
+  if (!table) {
     return;
   }
 
-  setTableLoading(
-    elements.requestsTable,
-    6
-  );
+  table.innerHTML = `
+    <tr>
+      <td colspan="6">
+        جاري تحميل طلبات العملاء...
+      </td>
+    </tr>
+  `;
 
   try {
     const data =
       await loadClientRequests();
 
     const requests =
-      Array.isArray(data.requests)
+      Array.isArray(
+        data.requests
+      )
         ? data.requests
         : [];
 
     if (!requests.length) {
-      setTableEmpty(
-        elements.requestsTable,
-        6,
-        "لا توجد طلبات عملاء."
-      );
+      table.innerHTML = `
+        <tr>
+          <td colspan="6">
+            لا توجد طلبات عملاء حالياً.
+          </td>
+        </tr>
+      `;
 
       return;
     }
 
-    elements.requestsTable.innerHTML =
+    table.innerHTML =
       requests
         .map(
           (request) => `
             <tr>
               <td>
-                <strong>
-                  ${escapeHTML(
-                    request.name
-                  )}
-                </strong>
-
-                ${
-                  request.phone
-                    ? `
-                      <div
-                        style="
-                          color:#64748b;
-                          font-size:11px;
-                          margin-top:3px;
-                        "
-                      >
-                        ${escapeHTML(
-                          request.phone
-                        )}
-                      </div>
-                    `
-                    : ""
-                }
+                ${escapeHTML(
+                  request.name ||
+                    "—"
+                )}
               </td>
 
               <td>
                 ${escapeHTML(
-                  request.email
+                  request.email ||
+                    "—"
                 )}
               </td>
 
@@ -953,7 +1034,7 @@ async function refreshRequests() {
               </td>
 
               <td>
-                ${formatStatus(
+                ${statusBadge(
                   request.status
                 )}
               </td>
@@ -967,37 +1048,50 @@ async function refreshRequests() {
           `
         )
         .join("");
+
   } catch (error) {
     console.error(
       "[REQUESTS]",
       error
     );
 
-    setTableError(
-      elements.requestsTable,
-      6,
-      error.message ||
-        "تعذر تحميل الطلبات."
-    );
+    table.innerHTML = `
+      <tr>
+        <td colspan="6">
+          تعذر تحميل طلبات العملاء.
+          ${escapeHTML(
+            error.message || ""
+          )}
+        </td>
+      </tr>
+    `;
   }
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| Render applications
+| Applications
 |--------------------------------------------------------------------------
 */
 
 async function refreshApplications() {
-  if (!elements.applicationsTable) {
+  const table =
+    document.querySelector(
+      "#applicationsTable"
+    );
+
+  if (!table) {
     return;
   }
 
-  setTableLoading(
-    elements.applicationsTable,
-    6
-  );
+  table.innerHTML = `
+    <tr>
+      <td colspan="6">
+        جاري تحميل طلبات الوظائف...
+      </td>
+    </tr>
+  `;
 
   try {
     const data =
@@ -1011,44 +1105,27 @@ async function refreshApplications() {
         : [];
 
     if (!applications.length) {
-      setTableEmpty(
-        elements.applicationsTable,
-        6,
-        "لا توجد طلبات توظيف."
-      );
+      table.innerHTML = `
+        <tr>
+          <td colspan="6">
+            لا توجد طلبات توظيف حالياً.
+          </td>
+        </tr>
+      `;
 
       return;
     }
 
-    elements.applicationsTable.innerHTML =
+    table.innerHTML =
       applications
         .map(
           (application) => `
             <tr>
               <td>
-                <strong>
-                  ${escapeHTML(
-                    application.full_name
-                  )}
-                </strong>
-
-                ${
-                  application.email
-                    ? `
-                      <div
-                        style="
-                          color:#64748b;
-                          font-size:11px;
-                          margin-top:3px;
-                        "
-                      >
-                        ${escapeHTML(
-                          application.email
-                        )}
-                      </div>
-                    `
-                    : ""
-                }
+                ${escapeHTML(
+                  application.full_name ||
+                    "—"
+                )}
               </td>
 
               <td>
@@ -1074,12 +1151,12 @@ async function refreshApplications() {
               <td>
                 ${escapeHTML(
                   application.job_title ||
-                    "طلب عام"
+                    "وظيفة غير محددة"
                 )}
               </td>
 
               <td>
-                ${formatStatus(
+                ${statusBadge(
                   application.status
                 )}
               </td>
@@ -1093,18 +1170,23 @@ async function refreshApplications() {
           `
         )
         .join("");
+
   } catch (error) {
     console.error(
       "[APPLICATIONS]",
       error
     );
 
-    setTableError(
-      elements.applicationsTable,
-      6,
-      error.message ||
-        "تعذر تحميل طلبات التوظيف."
-    );
+    table.innerHTML = `
+      <tr>
+        <td colspan="6">
+          تعذر تحميل طلبات الوظائف.
+          ${escapeHTML(
+            error.message || ""
+          )}
+        </td>
+      </tr>
+    `;
   }
 }
 
@@ -1115,32 +1197,27 @@ async function refreshApplications() {
 |--------------------------------------------------------------------------
 |
 | api.js الحالي لا يحتوي على:
-| GET /admin/messages
+| GET /api/admin/messages
 |
-| لذلك لن نطلب endpoint غير موجود.
-|
+| لذلك لا نقوم بطلب endpoint غير موجود.
+|--------------------------------------------------------------------------
 */
 
-function refreshMessages() {
-  if (!elements.messagesTable) {
+function renderMessagesNotice() {
+  const table =
+    document.querySelector(
+      "#messagesTable"
+    );
+
+  if (!table) {
     return;
   }
 
-  elements.messagesTable.innerHTML = `
+  table.innerHTML = `
     <tr>
-      <td
-        colspan="5"
-        style="
-          text-align:center;
-          color:#94a3b8;
-          padding:30px;
-        "
-      >
-        قسم الرسائل يحتاج إضافة
-        <code style="color:#a5b4fc;">
-          GET /admin/messages
-        </code>
-        في api.js.
+      <td colspan="5">
+        إدارة الرسائل تحتاج إضافة
+        endpoint إداري في الخادم.
       </td>
     </tr>
   `;
@@ -1153,377 +1230,203 @@ function refreshMessages() {
 |--------------------------------------------------------------------------
 */
 
-const sectionInfo = {
-  overview: {
-    title: "نظرة عامة",
-    description:
-      "متابعة حالة المنصة والنشاط الأخير."
-  },
-
-  projects: {
-    title: "المشاريع",
-    description:
-      "عرض وإدارة مشاريع المنصة."
-  },
-
-  services: {
-    title: "الخدمات",
-    description:
-      "عرض الخدمات المنشورة وحالتها."
-  },
-
-  requests: {
-    title: "طلبات العملاء",
-    description:
-      "متابعة طلبات المشاريع الواردة."
-  },
-
-  applications: {
-    title: "طلبات الوظائف",
-    description:
-      "متابعة طلبات التوظيف الواردة."
-  },
-
-  messages: {
-    title: "الرسائل",
-    description:
-      "متابعة رسائل العملاء."
-  },
-
-  settings: {
-    title: "الإعدادات",
-    description:
-      "إعدادات المنصة والحساب."
-  }
-};
-
-async function showSection(
+function setActiveSection(
   sectionName
 ) {
-  const section =
-    sectionInfo[sectionName];
-
-  if (!section) {
-    return;
-  }
-
-  document
-    .querySelectorAll(
-      ".side-link[data-section]"
-    )
-    .forEach((button) => {
-      button.classList.toggle(
-        "active",
-        button.dataset.section ===
-          sectionName
-      );
-    });
-
-  document
-    .querySelectorAll(
+  const sections =
+    document.querySelectorAll(
       ".admin-section"
-    )
-    .forEach((element) => {
-      element.classList.toggle(
-        "active",
-        element.id ===
-          `section-${sectionName}`
+    );
+
+  sections.forEach(
+    (section) => {
+      section.classList.remove(
+        "active"
       );
-    });
+    }
+  );
 
-  if (elements.pageTitle) {
-    elements.pageTitle.textContent =
-      section.title;
-  }
+  const target =
+    document.querySelector(
+      `#section-${sectionName}`
+    );
 
-  if (elements.pageDescription) {
-    elements.pageDescription.textContent =
-      section.description;
-  }
-
-  if (elements.sidebar) {
-    elements.sidebar.classList.remove(
-      "open"
+  if (target) {
+    target.classList.add(
+      "active"
     );
   }
 
-  /*
-  | Load section data
-  */
+  const links =
+    document.querySelectorAll(
+      ".side-link[data-section]"
+    );
 
-  switch (sectionName) {
-    case "overview":
-      await refreshDashboard();
-      break;
+  links.forEach(
+    (link) => {
+      link.classList.toggle(
+        "active",
+        link.dataset.section ===
+          sectionName
+      );
+    }
+  );
 
-    case "projects":
-      await refreshProjects();
-      break;
+  const config =
+    PAGE_CONFIG[
+      sectionName
+    ] || PAGE_CONFIG.overview;
 
-    case "services":
-      await refreshServices();
-      break;
+  setElementText(
+    "#pageTitle",
+    config.title
+  );
 
-    case "requests":
-      await refreshRequests();
-      break;
+  setElementText(
+    "#pageDescription",
+    config.description
+  );
 
-    case "applications":
-      await refreshApplications();
-      break;
+  closeMobileSidebar();
 
-    case "messages":
-      refreshMessages();
-      break;
+  if (
+    sectionName ===
+    "projects"
+  ) {
+    refreshProjects();
+  }
 
-    default:
-      break;
+  if (
+    sectionName ===
+    "services"
+  ) {
+    refreshServices();
+  }
+
+  if (
+    sectionName ===
+    "requests"
+  ) {
+    refreshRequests();
+  }
+
+  if (
+    sectionName ===
+    "applications"
+  ) {
+    refreshApplications();
+  }
+
+  if (
+    sectionName ===
+    "messages"
+  ) {
+    renderMessagesNotice();
   }
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| Setup navigation
-|--------------------------------------------------------------------------
-*/
-
 function setupNavigation() {
-  document
-    .querySelectorAll(
+  const links =
+    document.querySelectorAll(
       ".side-link[data-section]"
-    )
-    .forEach((button) => {
-      button.addEventListener(
+    );
+
+  links.forEach(
+    (link) => {
+      link.addEventListener(
         "click",
         () => {
-          showSection(
-            button.dataset.section
-          );
+          const section =
+            link.dataset.section;
+
+          if (section) {
+            setActiveSection(
+              section
+            );
+          }
         }
       );
-    });
+    }
+  );
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| Mobile menu
+| Mobile sidebar
 |--------------------------------------------------------------------------
 */
 
+function openMobileSidebar() {
+  const sidebar =
+    document.querySelector(
+      "#sidebar"
+    );
+
+  if (sidebar) {
+    sidebar.classList.add(
+      "open"
+    );
+  }
+}
+
+function closeMobileSidebar() {
+  const sidebar =
+    document.querySelector(
+      "#sidebar"
+    );
+
+  if (sidebar) {
+    sidebar.classList.remove(
+      "open"
+    );
+  }
+}
+
 function setupMobileMenu() {
-  if (
-    !elements.mobileMenuButton ||
-    !elements.sidebar
-  ) {
+  const button =
+    document.querySelector(
+      "#mobileMenuButton"
+    );
+
+  const sidebar =
+    document.querySelector(
+      "#sidebar"
+    );
+
+  if (!button || !sidebar) {
     return;
   }
 
-  elements.mobileMenuButton.addEventListener(
+  button.addEventListener(
     "click",
     () => {
-      elements.sidebar.classList.toggle(
+      sidebar.classList.toggle(
         "open"
       );
     }
   );
-}
 
-
-/*
-|--------------------------------------------------------------------------
-| Login UI
-|--------------------------------------------------------------------------
-*/
-
-function showDashboard() {
-  if (elements.loginScreen) {
-    elements.loginScreen.style.display =
-      "none";
-  }
-
-  if (elements.dashboard) {
-    elements.dashboard.classList.add(
-      "active"
-    );
-  }
-}
-
-function showLoginScreen() {
-  if (elements.dashboard) {
-    elements.dashboard.classList.remove(
-      "active"
-    );
-  }
-
-  if (elements.loginScreen) {
-    elements.loginScreen.style.display =
-      "grid";
-  }
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Admin information
-|--------------------------------------------------------------------------
-*/
-
-function renderAdminUser(user) {
-  if (!user) {
-    return;
-  }
-
-  if (elements.adminName) {
-    elements.adminName.textContent =
-      user.full_name ||
-      user.email ||
-      "Admin";
-  }
-
-  if (elements.adminRole) {
-    const roleNames = {
-      admin: "Administrator",
-      manager: "Manager",
-      employee: "Employee"
-    };
-
-    elements.adminRole.textContent =
-      roleNames[user.role] ||
-      user.role ||
-      "Administrator";
-  }
-
-  const avatar =
-    document.querySelector(
-      ".avatar"
-    );
-
-  if (avatar) {
-    const name =
-      user.full_name ||
-      user.email ||
-      "A";
-
-    avatar.textContent =
-      name
-        .trim()
-        .charAt(0)
-        .toUpperCase();
-  }
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Login handler
-|--------------------------------------------------------------------------
-*/
-
-function setupLogin() {
-  if (!elements.loginForm) {
-    return;
-  }
-
-  elements.loginForm.addEventListener(
-    "submit",
-    async (event) => {
-      event.preventDefault();
-
-      const email =
-        elements.loginEmail?.value.trim();
-
-      const password =
-        elements.loginPassword?.value;
-
-      if (!email || !password) {
-        showMessage(
-          elements.loginMessage,
-          "يرجى إدخال البريد الإلكتروني وكلمة المرور."
-        );
-
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (
+        window.innerWidth > 900
+      ) {
         return;
       }
 
-      const submitButton =
-        elements.loginForm.querySelector(
-          'button[type="submit"]'
-        );
-
-      const originalText =
-        submitButton
-          ? submitButton.textContent
-          : "";
-
-      try {
-        if (submitButton) {
-          submitButton.disabled = true;
-          submitButton.textContent =
-            "جاري تسجيل الدخول...";
-        }
-
-        showMessage(
-          elements.loginMessage,
-          ""
-        );
-
-        const data =
-          await adminLogin(
-            email,
-            password
-          );
-
-        renderAdminUser(
-          data.user
-        );
-
-        showDashboard();
-
-        await showSection(
-          "overview"
-        );
-
-        elements.loginForm.reset();
-      } catch (error) {
-        console.error(
-          "[LOGIN]",
-          error
-        );
-
-        showMessage(
-          elements.loginMessage,
-          error.message ||
-            "فشل تسجيل الدخول."
-        );
-
-        clearAdminSessionWithoutRedirect();
-      } finally {
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.textContent =
-            originalText ||
-            "تسجيل الدخول";
-        }
+      if (
+        !sidebar.contains(
+          event.target
+        ) &&
+        !button.contains(
+          event.target
+        )
+      ) {
+        closeMobileSidebar();
       }
     }
-  );
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Session helper
-|--------------------------------------------------------------------------
-|
-| يستخدم عند فشل Login حتى لا يعيد الصفحة
-| التوجيه إلى نفسها.
-|
-*/
-
-function clearAdminSessionWithoutRedirect() {
-  sessionStorage.removeItem(
-    "admin_token"
   );
 }
 
@@ -1535,11 +1438,16 @@ function clearAdminSessionWithoutRedirect() {
 */
 
 function setupLogout() {
-  if (!elements.logoutButton) {
+  const button =
+    document.querySelector(
+      "#logoutButton"
+    );
+
+  if (!button) {
     return;
   }
 
-  elements.logoutButton.addEventListener(
+  button.addEventListener(
     "click",
     () => {
       clearAdminSession();
@@ -1555,130 +1463,146 @@ function setupLogout() {
 */
 
 function setupRefreshButtons() {
-  const refreshDashboard =
+  const dashboardButton =
     document.querySelector(
       "#refreshDashboard"
     );
 
-  const refreshProjects =
+  if (dashboardButton) {
+    dashboardButton.addEventListener(
+      "click",
+      async () => {
+        await runWithButtonState(
+          dashboardButton,
+          "جاري التحديث...",
+          async () => {
+            await refreshStats();
+          }
+        );
+      }
+    );
+  }
+
+  const projectsButton =
     document.querySelector(
       "#refreshProjects"
     );
 
-  const refreshRequests =
+  if (projectsButton) {
+    projectsButton.addEventListener(
+      "click",
+      async () => {
+        await runWithButtonState(
+          projectsButton,
+          "جاري التحديث...",
+          async () => {
+            await refreshProjects();
+          }
+        );
+      }
+    );
+  }
+
+  const requestsButton =
     document.querySelector(
       "#refreshRequests"
     );
 
-  const refreshApplications =
+  if (requestsButton) {
+    requestsButton.addEventListener(
+      "click",
+      async () => {
+        await runWithButtonState(
+          requestsButton,
+          "جاري التحديث...",
+          async () => {
+            await refreshRequests();
+          }
+        );
+      }
+    );
+  }
+
+  const applicationsButton =
     document.querySelector(
       "#refreshApplications"
     );
 
-  if (refreshDashboard) {
-    refreshDashboard.addEventListener(
+  if (applicationsButton) {
+    applicationsButton.addEventListener(
       "click",
       async () => {
-        await refreshDashboardData();
-      }
-    );
-  }
-
-  if (refreshProjects) {
-    refreshProjects.addEventListener(
-      "click",
-      async () => {
-        await refreshProjectsData();
-      }
-    );
-  }
-
-  if (refreshRequests) {
-    refreshRequests.addEventListener(
-      "click",
-      async () => {
-        await refreshRequestsData();
-      }
-    );
-  }
-
-  if (refreshApplications) {
-    refreshApplications.addEventListener(
-      "click",
-      async () => {
-        await refreshApplicationsData();
+        await runWithButtonState(
+          applicationsButton,
+          "جاري التحديث...",
+          async () => {
+            await refreshApplications();
+          }
+        );
       }
     );
   }
 }
 
+async function runWithButtonState(
+  button,
+  loadingText,
+  callback
+) {
+  const originalText =
+    button.textContent;
 
-/*
-|--------------------------------------------------------------------------
-| Button wrappers
-|--------------------------------------------------------------------------
-*/
+  button.disabled = true;
 
-async function refreshDashboardData() {
-  await refreshDashboard();
-}
-
-async function refreshProjectsData() {
-  await refreshProjects();
-}
-
-async function refreshRequestsData() {
-  await refreshRequests();
-}
-
-async function refreshApplicationsData() {
-  await refreshApplications();
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Initial session
-|--------------------------------------------------------------------------
-*/
-
-async function initializeAdmin() {
-  const token =
-    getAdminToken();
-
-  if (!token) {
-    showLoginScreen();
-    return;
-  }
+  button.textContent =
+    loadingText;
 
   try {
-    const data =
+    await callback();
+  } catch (error) {
+    console.error(error);
+  } finally {
+    button.disabled = false;
+
+    button.textContent =
+      originalText;
+  }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Initialize authenticated dashboard
+|--------------------------------------------------------------------------
+*/
+
+async function initializeDashboard() {
+  try {
+    const userData =
       await loadCurrentAdmin();
 
-    renderAdminUser(
-      data.user
+    updateAdminUser(
+      userData.user
     );
 
     showDashboard();
 
-    await showSection(
-      "overview"
-    );
+    await refreshStats();
+
   } catch (error) {
     console.error(
-      "[SESSION]",
+      "[ADMIN INIT]",
       error
     );
 
-    clearAdminSessionWithoutRedirect();
-    showLoginScreen();
+    showLogin();
   }
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| Init
+| Startup
 |--------------------------------------------------------------------------
 */
 
@@ -1691,6 +1615,14 @@ document.addEventListener(
     setupLogout();
     setupRefreshButtons();
 
-    await initializeAdmin();
+    const token =
+      getAdminToken();
+
+    if (!token) {
+      showLogin();
+      return;
+    }
+
+    await initializeDashboard();
   }
 );
